@@ -14,8 +14,17 @@ def softmax(predictions):
         probability for every class, 0..1
     '''
     # TODO implement softmax
-    # Your final implementation shouldn't have any loops
-    raise Exception("Not implemented!")
+    predictions -= np.max(predictions)
+    
+    # probs for (N) shape predictions
+    if predictions.shape == (len(predictions), ):
+        probs = np.exp(predictions) / np.sum(np.exp(predictions))
+        
+    # probs for (batch_size, N) predictions
+    else:
+        probs = np.exp(predictions) / np.sum(np.exp(predictions), axis=1, keepdims=True)
+    
+    return probs
 
 
 def cross_entropy_loss(probs, target_index):
@@ -32,8 +41,16 @@ def cross_entropy_loss(probs, target_index):
       loss: single value
     '''
     # TODO implement cross-entropy
-    # Your final implementation shouldn't have any loops
-    raise Exception("Not implemented!")
+    
+    # loss for (N) shape probs
+    if probs.shape == (len(probs), ):
+        loss = - np.log(probs[target_index])
+        
+    # loss for (batch_size, N) shape probs
+    else:
+        loss = - np.log(probs[np.arange(len(probs)), target_index])
+    
+    return loss
 
 
 def softmax_with_cross_entropy(predictions, target_index):
@@ -52,8 +69,21 @@ def softmax_with_cross_entropy(predictions, target_index):
       dprediction, np array same shape as predictions - gradient of predictions by loss value
     '''
     # TODO implement softmax with cross-entropy
-    # Your final implementation shouldn't have any loops
-    raise Exception("Not implemented!")
+    
+    preds = predictions.copy()
+    probs = softmax(preds)
+    loss = cross_entropy_loss(probs, target_index).mean()
+    mask = np.zeros_like(predictions)
+
+    # mask and dprediction for (N) shape predictions
+    if predictions.shape == (len(predictions), ):
+        mask[target_index] = 1
+        dprediction = - (mask - probs)
+        
+    # mask and dprediction for (batch_size, N) shape predictions
+    else:
+        mask[np.arange(len(mask)), target_index] = 1
+        dprediction = - (mask - probs) / (len(mask))
 
     return loss, dprediction
 
@@ -71,9 +101,8 @@ def l2_regularization(W, reg_strength):
       gradient, np.array same shape as W - gradient of weight by l2 loss
     '''
 
-    # TODO: implement l2 regularization and gradient
-    # Your final implementation shouldn't have any loops
-    raise Exception("Not implemented!")
+    loss = reg_strength * np.sum(W ** 2)
+    grad = 2 * reg_strength * W
 
     return loss, grad
     
@@ -94,9 +123,8 @@ def linear_softmax(X, W, target_index):
     '''
     predictions = np.dot(X, W)
 
-    # TODO implement prediction and gradient over W
-    # Your final implementation shouldn't have any loops
-    raise Exception("Not implemented!")
+    loss, dprediction = softmax_with_cross_entropy(predictions, target_index)
+    dW = np.dot(X.T, dprediction)
     
     return loss, dW
 
@@ -137,10 +165,16 @@ class LinearSoftmaxClassifier():
             # Apply gradient to weights using learning rate
             # Don't forget to add both cross-entropy loss
             # and regularization!
-            raise Exception("Not implemented!")
-
+            batch_index = np.random.randint(len(batches_indices))
+            
+            
+            loss1, dW1 = linear_softmax(X[batches_indices[batch_index]], self.W, y[batches_indices[batch_index]])
+            loss2, dW2 = l2_regularization(self.W, reg)
+            self.W = self.W - learning_rate*(dW1+dW2)
+            loss = loss1+loss2
+            loss_history.append(loss)
             # end
-            print("Epoch %i, loss: %f" % (epoch, loss))
+            #print("Epoch %i, loss: %f" % (epoch, loss))
 
         return loss_history
 
@@ -156,9 +190,7 @@ class LinearSoftmaxClassifier():
         '''
         y_pred = np.zeros(X.shape[0], dtype=np.int)
 
-        # TODO Implement class prediction
-        # Your final implementation shouldn't have any loops
-        raise Exception("Not implemented!")
+        y_pred = np.argmax(softmax(X.dot(self.W)), axis=1)
 
         return y_pred
 
